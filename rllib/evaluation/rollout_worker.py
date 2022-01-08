@@ -1258,8 +1258,8 @@ class RolloutWorker(ParallelIteratorWorker):
             `func([policy, pid, **kwargs])`.
         """
         return [
-            func(policy, pid, **kwargs)
-            for pid, policy in self.policy_map.items()
+            func(self.policy_map[pid], pid, **kwargs)
+            for pid in self.policy_map.keys()
             if pid in self.policies_to_train
         ]
 
@@ -1369,8 +1369,8 @@ class RolloutWorker(ParallelIteratorWorker):
         policies = force_list(policies)
 
         return {
-            pid: policy.get_weights()
-            for pid, policy in self.policy_map.items() if pid in policies
+            pid: self.policy_map[pid].get_weights()
+            for pid in self.policy_map.keys() if pid in policies
         }
 
     @DeveloperAPI
@@ -1418,7 +1418,7 @@ class RolloutWorker(ParallelIteratorWorker):
         Examples:
             >>> global_vars = worker.set_global_vars({"timestep": 4242})
         """
-        self.foreach_policy(lambda p, _: p.on_global_var_update(global_vars))
+        self.foreach_trainable_policy(lambda p, _: p.on_global_var_update(global_vars))
         self.global_vars = global_vars
 
     @DeveloperAPI
