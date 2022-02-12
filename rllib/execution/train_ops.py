@@ -228,7 +228,9 @@ class TrainOneStep:
                     lw.get_weights(self.policies or lw.get_policies_to_train(batch))
                 )
                 for e in self.workers.remote_workers():
-                    e.set_weights.remote(weights, _get_global_vars())
+                    for policy in e.policies_to_train:
+                        if policy in weights:
+                            e.set_weights.remote({policy: weights[policy]}, _get_global_vars())
         # Also update global vars of the local worker.
         lw.set_global_vars(_get_global_vars())
         return batch, learner_info
