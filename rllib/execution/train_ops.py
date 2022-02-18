@@ -1,8 +1,8 @@
 import logging
-import numpy as np
-import math
 from typing import Dict, List, Tuple, Any
 
+import math
+import numpy as np
 import ray
 from ray.rllib.evaluation.worker_set import WorkerSet
 from ray.rllib.execution.common import (
@@ -364,13 +364,14 @@ class MultiGPUTrainOneStep:
 
         if self.workers.remote_workers():
             with metrics.timers[WORKER_UPDATE_TIMER]:
-                weights = ray.put(
-                    self.workers.local_worker().get_weights(
-                        self.local_worker.get_policies_to_train()
-                    )
+                weights = self.workers.local_worker().get_weights(
+                    self.local_worker.get_policies_to_train()
                 )
                 for e in self.workers.remote_workers():
-                    e.set_weights.remote(weights, _get_global_vars())
+                    for policy in ray.get(e.get_policies_to_train.remote()):
+                        if policy in weights:
+                            policy_weights = ray.put({policy: weights[policy]})
+                            e.set_weights.remote(policy_weights, _get_global_vars())
 
         # Also update global vars of the local worker.
         self.workers.local_worker().set_global_vars(_get_global_vars())
